@@ -22,8 +22,9 @@ export const Docker = () => {
 		await $`docker rm -f ${service.name}`.quiet();
 
 		const volumes = service.volumes?.flatMap((v) => ["-v", v]) ?? [];
+		const ports = service.ports?.flatMap((p) => ["-p", p]) ?? [];
 
-		await $`docker run -d --rm --network halo --name ${service.name} -p ${service.port} ${volumes} ${service.package}`.quiet();
+		await $`docker run -d --rm --network halo --name ${service.name} ${ports} ${volumes} ${service.package}`.quiet();
 
 		console.log("Service running:", service.name);
 	};

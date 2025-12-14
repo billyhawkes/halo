@@ -6,7 +6,7 @@ export type Config = {};
 export type ServiceConfig = {
 	name: string;
 	package: string;
-	port: string;
+	ports: string[];
 	domain?: string;
 	volumes?: string[];
 };
@@ -37,8 +37,9 @@ export const Halo = (config: Config = {}) => {
 
 		console.log("Running services");
 		for (const service of resources.services) {
+			const hostPort = service.ports[0]?.split(":")[1];
 			const caddy = `${service.domain} {
-	reverse_proxy ${service.name}:${service.port.split(":")[1]}
+	reverse_proxy ${service.name}:${hostPort}
 }
 `;
 			await docker.pull(service.package);
@@ -50,7 +51,7 @@ export const Halo = (config: Config = {}) => {
 		await docker.run({
 			name: "halo-caddy",
 			package: "caddy",
-			port: "80:80",
+			ports: ["80:80", "443:443"],
 			volumes: [`${directory}:/etc/caddy`],
 		});
 	};

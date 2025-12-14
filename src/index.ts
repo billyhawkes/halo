@@ -23,7 +23,7 @@ export const main = async () => {
 		name: "recordscratch",
 		domain: "test.recordscratch.app",
 		package: "ghcr.io/hackthebois/recordscratch:latest",
-		port: "3000:3000",
+		ports: ["3000:3000"],
 	});
 
 	// Handles webhooks, deployments, and other events
