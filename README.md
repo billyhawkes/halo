@@ -7,6 +7,27 @@ Typescript based infrastructure as code tool. The goal is to run services, datab
 - Container Orchestration: Docker
 - Server: Bun (Handles redeployments, api, eventually UI)
 
+## Features
+
+### Proxy
+- [x] Caddy server
+- [x] Automated caddy configuration and running
+
+### Container Management
+- [x] Docker pull/run
+- [ ] Always up deployments
+- [ ] Environment variables
+- [ ] Databases (automated backups)
+
+### Server
+- [ ] Service Deployment Webhooks
+- [ ] Root domain
+
+### Interface
+- [ ] Authentication (Master pass)
+- [ ] Dashboard
+
+
 ## API (CURRENT)
 
 ```ts
