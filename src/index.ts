@@ -1,8 +1,8 @@
 import { Halo } from "./halo";
 
-const halo = Halo();
-
 export const main = async () => {
+	const halo = await Halo();
+
 	halo.service({
 		name: "recordscratch",
 		domain: "test.recordscratch.app",

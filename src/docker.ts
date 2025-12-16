@@ -1,37 +1,72 @@
 import { $ } from "bun";
 import type { ServiceConfig } from "./halo";
+import { Data, Effect, pipe } from "effect";
 
-export const Docker = () => {
-	const running = async (name: string): Promise<boolean> => {
-		const result = await $`docker inspect -f '{{.State.Running}}' '${name}'`
-			.nothrow()
-			.quiet();
+export class DockerError extends Data.TaggedError("DockerError")<{
+	message: string;
+	cause?: unknown;
+}> {}
 
-		return result.exitCode === 0 && result.text().trim() === "true";
-	};
+export class Docker extends Effect.Service<Docker>()("app/Docker", {
+	effect: Effect.gen(function* () {
+		const command = (args: string[]) =>
+			Effect.tryPromise({
+				try: () => $`docker ${args}`.quiet(),
+				catch: (e) =>
+					new DockerError({
+						message: `Failed to run: docker ${args.join(" ")}`,
+						cause: e,
+					}),
+			});
 
-	const pull = async (image: string) => {
-		await $`docker pull ${image}`.quiet();
-	};
+		const running = (name: string) =>
+			pipe(
+				command(["inspect", "-f", "'{{.State.Running}}'", name]),
+				Effect.map((result) => result.text().trim() === "true"),
+				Effect.tap(() => Effect.log(`Inspected ${name}`)),
+			);
 
-	const run = async (service: ServiceConfig) => {
-		try {
-			await $`docker network create halo`.quiet();
-		} catch (e) {}
+		const pull = (image: string) =>
+			pipe(
+				command(["pull", image]),
+				Effect.tap(() => Effect.log(`Pulled ${image}`)),
+			);
 
-		await $`docker rm -f ${service.name}`.quiet();
+		const remove = (name: string) =>
+			pipe(
+				command(["rm", "-f", name]),
+				Effect.tap(() => Effect.log(`Removed ${name}`)),
+			);
 
-		const volumes = service.volumes?.flatMap((v) => ["-v", v]) ?? [];
-		const ports = service.ports?.flatMap((p) => ["-p", p]) ?? [];
+		const run = (service: ServiceConfig) =>
+			Effect.gen(function* () {
+				yield* remove(service.name);
+				yield* pull(service.package);
 
-		await $`docker run -d --rm --network halo --name ${service.name} ${ports} ${volumes} ${service.package}`.quiet();
+				yield* pipe(
+					command([
+						"run",
+						"-d",
+						"--rm",
+						"--network=halo",
+						...["--name", service.name],
+						...(service.volumes?.flatMap((v) => ["-v", v]) ?? []),
+						...(service.ports?.flatMap((p) => ["-p", p]) ?? []),
+						service.package,
+					]),
+					Effect.tap(() => Effect.log(`Started ${service.name}`)),
+				);
+			});
 
-		console.log("Service running:", service.name);
-	};
+		return {
+			running,
+			pull,
+			remove,
+			run,
+		};
+	}),
+}) {}
 
-	return {
-		running,
-		pull,
-		run,
-	};
+export const getDocker = async () => {
+	return Effect.runPromise(Docker.pipe(Effect.provide(Docker.Default)));
 };

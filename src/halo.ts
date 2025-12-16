@@ -1,5 +1,6 @@
 import path from "path";
-import { Docker } from "./docker";
+import { Docker, getDocker } from "./docker";
+import { Effect } from "effect";
 
 export type Config = {};
 
@@ -17,11 +18,19 @@ export type ResourceGraph = {
 	services: ServiceConfig[];
 };
 
-export const Halo = (config: Config = {}) => {
+export const Halo = async (_: Config = {}) => {
 	const directory = path.join(__dirname, "../.halo");
-	const docker = Docker();
+	const docker = await getDocker();
+
 	const resources: ResourceGraph = {
-		services: [],
+		services: [
+			{
+				name: "halo-caddy",
+				package: "caddy",
+				ports: ["80:80", "443:443"],
+				volumes: [`${directory}:/etc/caddy`],
+			},
+		],
 	};
 
 	const service = (options: ServiceConfig) => {
@@ -42,18 +51,10 @@ export const Halo = (config: Config = {}) => {
 	reverse_proxy ${service.name}:${hostPort}
 }
 `;
-			await docker.pull(service.package);
-			await docker.run(service);
+			await Effect.runPromise(docker.run(service));
 
 			caddyFile.write(caddy);
 		}
-
-		await docker.run({
-			name: "halo-caddy",
-			package: "caddy",
-			ports: ["80:80", "443:443"],
-			volumes: [`${directory}:/etc/caddy`],
-		});
 	};
 
 	return {
