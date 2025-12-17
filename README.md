@@ -15,12 +15,13 @@ Typescript based infrastructure as code tool. The goal is to run services, datab
 
 ### Container Management
 - [x] Docker pull/run
-- [ ] Always up deployments
 - [ ] Environment variables
-- [ ] Databases (automated backups)
+- [ ] Always up deployments
+- [ ] Databases (automated backups, sqlite w/litestream?)
 
 ### Server
-- [ ] Service Deployment Webhooks
+- [x] Redeployment
+- [ ] Webhook authentication
 - [ ] Root domain
 
 ### Interface
@@ -33,10 +34,11 @@ Typescript based infrastructure as code tool. The goal is to run services, datab
 ```ts
 import { Halo } from "./halo";
 
-const halo = Halo();
 
 export const main = async () => {
-	halo.service({
+	const halo = await Halo();
+
+	halo.resource({
 		name: "recordscratch",
 		domain: "test.recordscratch.app",
 		package: "ghcr.io/hackthebois/recordscratch:latest",

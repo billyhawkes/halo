@@ -3,7 +3,7 @@ import { Halo } from "./halo";
 export const main = async () => {
 	const halo = await Halo();
 
-	halo.service({
+	halo.resource({
 		name: "recordscratch",
 		domain: "test.recordscratch.app",
 		package: "ghcr.io/hackthebois/recordscratch:latest",

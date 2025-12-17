@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import type { ServiceConfig } from "./halo";
+import type { ServiceConfig } from "../halo";
 import { Data, Effect, pipe } from "effect";
 
 export class DockerError extends Data.TaggedError("DockerError")<{
@@ -26,6 +26,12 @@ export class Docker extends Effect.Service<Docker>()("app/Docker", {
 				Effect.tap(() => Effect.log(`Inspected ${name}`)),
 			);
 
+		const stop = (name: string) =>
+			pipe(
+				command(["stop", name]),
+				Effect.tap(() => Effect.log(`Stopped ${name}`)),
+			);
+
 		const pull = (image: string) =>
 			pipe(
 				command(["pull", image]),
@@ -39,27 +45,23 @@ export class Docker extends Effect.Service<Docker>()("app/Docker", {
 			);
 
 		const run = (service: ServiceConfig) =>
-			Effect.gen(function* () {
-				yield* remove(service.name);
-				yield* pull(service.package);
-
-				yield* pipe(
-					command([
-						"run",
-						"-d",
-						"--rm",
-						"--network=halo",
-						...["--name", service.name],
-						...(service.volumes?.flatMap((v) => ["-v", v]) ?? []),
-						...(service.ports?.flatMap((p) => ["-p", p]) ?? []),
-						service.package,
-					]),
-					Effect.tap(() => Effect.log(`Started ${service.name}`)),
-				);
-			});
+			pipe(
+				command([
+					"run",
+					"-d",
+					"--rm",
+					"--network=halo",
+					...["--name", service.name],
+					...(service.volumes?.flatMap((v) => ["-v", v]) ?? []),
+					...(service.ports?.flatMap((p) => ["-p", p]) ?? []),
+					service.package,
+				]),
+				Effect.tap(() => Effect.log(`Started ${service.name}`)),
+			);
 
 		return {
 			running,
+			stop,
 			pull,
 			remove,
 			run,

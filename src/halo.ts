@@ -1,10 +1,12 @@
-import path from "path";
-import { Docker, getDocker } from "./docker";
 import { Effect } from "effect";
+import { listen } from "./utils/listen";
+import { app } from "./router";
+import { Resources } from "./services/resources";
+import { BunContext } from "@effect/platform-bun";
 
 export type Config = {};
 
-export type ServiceConfig = {
+export type ResourceConfig = {
 	name: string;
 	package: string;
 	ports: string[];
@@ -12,54 +14,29 @@ export type ServiceConfig = {
 	volumes?: string[];
 };
 
-export type DatabaseConfig = {};
+export const Halo = async (_: Config = {}) =>
+	await Effect.runPromise(
+		Effect.gen(function* () {
+			const resources = yield* Resources;
 
-export type ResourceGraph = {
-	services: ServiceConfig[];
-};
+			const resource = (options: ResourceConfig) =>
+				Effect.runSync(resources.resource(options));
 
-export const Halo = async (_: Config = {}) => {
-	const directory = path.join(__dirname, "../.halo");
-	const docker = await getDocker();
+			const run = async () =>
+				Effect.runPromise(
+					Effect.gen(function* () {
+						yield* resources.commit();
+						yield* resources.deploy();
+						listen(app, 8156);
+					}),
+				);
 
-	const resources: ResourceGraph = {
-		services: [
-			{
-				name: "halo-caddy",
-				package: "caddy",
-				ports: ["80:80", "443:443"],
-				volumes: [`${directory}:/etc/caddy`],
-			},
-		],
-	};
-
-	const service = (options: ServiceConfig) => {
-		resources.services.push(options);
-	};
-
-	const database = (options: DatabaseConfig) => {
-		console.log("database", options);
-	};
-
-	const run = async () => {
-		const caddyFile = Bun.file(directory + "/Caddyfile");
-
-		console.log("Running services");
-		for (const service of resources.services) {
-			const hostPort = service.ports[0]?.split(":")[1];
-			const caddy = `${service.domain} {
-	reverse_proxy ${service.name}:${hostPort}
-}
-`;
-			await Effect.runPromise(docker.run(service));
-
-			caddyFile.write(caddy);
-		}
-	};
-
-	return {
-		service,
-		database,
-		run,
-	};
-};
+			return {
+				resource,
+				run,
+			};
+		}).pipe(
+			Effect.provide(Resources.Default),
+			Effect.provide(BunContext.layer),
+		),
+	);
