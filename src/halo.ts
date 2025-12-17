@@ -3,8 +3,7 @@ import { listen } from "./utils/listen";
 import { app } from "./router";
 import { Resources } from "./services/resources";
 import { BunContext } from "@effect/platform-bun";
-
-export type Config = {};
+import { Config } from "./services/config";
 
 export type ResourceConfig = {
 	name: string;
@@ -14,18 +13,17 @@ export type ResourceConfig = {
 	volumes?: string[];
 };
 
-export const Halo = async (_: Config = {}) =>
+export const Halo = async () =>
 	await Effect.runPromise(
 		Effect.gen(function* () {
 			const resources = yield* Resources;
 
 			const resource = (options: ResourceConfig) =>
-				Effect.runSync(resources.resource(options));
+				Effect.runPromise(resources.resource(options));
 
 			const run = async () =>
 				Effect.runPromise(
 					Effect.gen(function* () {
-						yield* resources.commit();
 						yield* resources.deploy();
 						listen(app, 8156);
 					}),
@@ -37,6 +35,7 @@ export const Halo = async (_: Config = {}) =>
 			};
 		}).pipe(
 			Effect.provide(Resources.Default),
+			Effect.provide(Config.Default),
 			Effect.provide(BunContext.layer),
 		),
 	);

@@ -1,29 +1,51 @@
 import { $ } from "bun";
-import type { ServiceConfig } from "../halo";
+import type { ResourceConfig } from "../halo";
 import { Data, Effect, pipe } from "effect";
 
-export class DockerError extends Data.TaggedError("DockerError")<{
+export class ShellError extends Data.TaggedError("ShellError")<{
 	message: string;
-	cause?: unknown;
+	stdout: string;
+	stderr: string;
+	exitCode: number;
 }> {}
 
 export class Docker extends Effect.Service<Docker>()("app/Docker", {
 	effect: Effect.gen(function* () {
 		const command = (args: string[]) =>
-			Effect.tryPromise({
-				try: () => $`docker ${args}`.quiet(),
-				catch: (e) =>
-					new DockerError({
-						message: `Failed to run: docker ${args.join(" ")}`,
-						cause: e,
-					}),
-			});
+			Effect.tryPromise(() => $`docker ${args}`.nothrow().quiet()).pipe(
+				Effect.flatMap(({ stdout, stderr, exitCode }) => {
+					if (exitCode !== 0) {
+						return Effect.fail(
+							new ShellError({
+								message: `Failed to run: docker ${args.join(" ")}`,
+								stdout: stdout.toString(),
+								stderr: stderr.toString(),
+								exitCode,
+							}),
+						);
+					}
 
-		const running = (name: string) =>
+					return Effect.succeed(stdout.toString());
+				}),
+			);
+
+		const status = (name: string) =>
 			pipe(
 				command(["inspect", "-f", "'{{.State.Running}}'", name]),
-				Effect.map((result) => result.text().trim() === "true"),
-				Effect.tap(() => Effect.log(`Inspected ${name}`)),
+				Effect.map((result) =>
+					result.trim() === "true" ? "running" : "stopped",
+				),
+				Effect.catchTag("ShellError", (e) =>
+					Effect.gen(function* () {
+						if (e.stderr.includes("No such object")) {
+							return yield* Effect.succeed("removed" as const);
+						}
+						return yield* Effect.fail(e);
+					}),
+				),
+				Effect.tap((status) =>
+					Effect.log(`Retrieved status for ${name}: ${status}`),
+				),
 			);
 
 		const stop = (name: string) =>
@@ -44,7 +66,7 @@ export class Docker extends Effect.Service<Docker>()("app/Docker", {
 				Effect.tap(() => Effect.log(`Removed ${name}`)),
 			);
 
-		const run = (service: ServiceConfig) =>
+		const run = (service: ResourceConfig) =>
 			pipe(
 				command([
 					"run",
@@ -60,7 +82,7 @@ export class Docker extends Effect.Service<Docker>()("app/Docker", {
 			);
 
 		return {
-			running,
+			status,
 			stop,
 			pull,
 			remove,
@@ -68,7 +90,3 @@ export class Docker extends Effect.Service<Docker>()("app/Docker", {
 		};
 	}),
 }) {}
-
-export const getDocker = async () => {
-	return Effect.runPromise(Docker.pipe(Effect.provide(Docker.Default)));
-};

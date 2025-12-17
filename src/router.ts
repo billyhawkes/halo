@@ -7,6 +7,7 @@ import {
 import { Effect, Schema } from "effect";
 import { Resources } from "./services/resources";
 import { BunContext } from "@effect/platform-bun";
+import { Config } from "./services/config";
 
 const Params = Schema.Struct({
 	name: Schema.String,
@@ -34,6 +35,7 @@ const router = HttpRouter.empty.pipe(
 			);
 		}).pipe(
 			Effect.provide(Resources.Default),
+			Effect.provide(Config.Default),
 			Effect.provide(BunContext.layer),
 		),
 	),
