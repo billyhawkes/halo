@@ -8,6 +8,7 @@ import { Effect, Schema } from "effect";
 import { Resources } from "./services/resources";
 import { BunContext } from "@effect/platform-bun";
 import { Config } from "./services/config";
+import { Home } from "./routes/home";
 
 const Params = Schema.Struct({
 	name: Schema.String,
@@ -18,8 +19,7 @@ const router = HttpRouter.empty.pipe(
 	HttpRouter.get(
 		"/",
 		Effect.gen(function* () {
-			yield* Effect.log("Hello World");
-			return yield* HttpServerResponse.text("Hello World");
+			return yield* HttpServerResponse.html(Home("Hello"));
 		}),
 	),
 	HttpRouter.get(

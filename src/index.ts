@@ -14,4 +14,4 @@ export const main = async () => {
 	await halo.run();
 };
 
-main();
+await main();

@@ -23,13 +23,7 @@ export const Halo = async () =>
 			const resource = (options: ResourceConfig) =>
 				Effect.runPromise(resources.resource(options));
 
-			const run = async () =>
-				Effect.runPromise(
-					Effect.gen(function* () {
-						yield* resources.deploy();
-						listen(app, 8156);
-					}),
-				);
+			const run = async () => listen(app, 8156);
 
 			return {
 				resource,
