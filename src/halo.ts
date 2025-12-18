@@ -9,8 +9,9 @@ export type ResourceConfig = {
 	name: string;
 	package: string;
 	ports: string[];
-	domain?: string;
+	domains?: string[];
 	volumes?: string[];
+	env?: Record<string, string>;
 };
 
 export const Halo = async () =>

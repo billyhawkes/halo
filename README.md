@@ -24,7 +24,10 @@ Typescript based infrastructure as code tool. The goal is to run services, datab
 - [ ] Webhook authentication
 - [ ] Root domain
 
-### Interface
+### Services
+- [ ] Otel (Grafana? ClickStack?)
+
+### User Interface
 - [ ] Authentication (Master pass)
 - [ ] Dashboard
 

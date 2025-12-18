@@ -1,6 +1,6 @@
 import { FileSystem, Path } from "@effect/platform";
 import type { ResourceConfig } from "../halo";
-import { Effect } from "effect";
+import { Console, Effect } from "effect";
 
 export class Config extends Effect.Service<Config>()("app/Config", {
 	effect: Effect.gen(function* () {
@@ -48,20 +48,22 @@ export class Config extends Effect.Service<Config>()("app/Config", {
 		const commit = (newConfig: { resources: ResourceConfig[] }) =>
 			Effect.gen(function* () {
 				// Caddy
-				const content = config.resources
-					.filter((s) => s.domain)
-					.map((service) => {
+				const content = newConfig.resources
+					.filter((s) => s.domains && s.domains.length > 0)
+					.flatMap((service) => {
 						const hostPort = service.ports[0]?.split(":")[1];
-						return `${service.domain} {
-	reverse_proxy ${service.name}:${hostPort}
-}
-`;
+						return service.domains!.map(
+							(domain) =>
+								`${domain} {\n    reverse_proxy ${service.name}:${hostPort}\n}\n`,
+						);
 					})
 					.join("\n");
 
 				const caddyPath = path.join(directory, "Caddyfile");
 
 				yield* fs.writeFileString(caddyPath, content);
+
+				// Configuration
 				yield* fs.writeFileString(
 					configPath,
 					JSON.stringify(newConfig),
