@@ -11,7 +11,8 @@ export type ResourceConfig = {
 	ports: string[];
 	domains?: string[];
 	volumes?: string[];
-	env?: Record<string, string>;
+	env?: Record<string, string | undefined>;
+	envFile?: string;
 };
 
 export const Halo = async () =>

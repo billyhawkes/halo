@@ -13,6 +13,9 @@ export class Docker extends Effect.Service<Docker>()("app/Docker", {
 	effect: Effect.gen(function* () {
 		const command = (args: string[]) =>
 			Effect.tryPromise(() => $`docker ${args}`.nothrow().quiet()).pipe(
+				Effect.tap(() =>
+					Effect.logDebug(`COMMAND: docker ${args.join(" ")}`),
+				),
 				Effect.flatMap(({ stdout, stderr, exitCode }) => {
 					if (exitCode !== 0) {
 						return Effect.fail(
@@ -73,6 +76,12 @@ export class Docker extends Effect.Service<Docker>()("app/Docker", {
 					"-d",
 					"--rm",
 					"--network=halo",
+					...(service.env
+						? Object.entries(service.env).flatMap(([k, v]) => [
+								"-e",
+								`${k}=${v}`,
+							])
+						: []),
 					...["--name", service.name],
 					...(service.volumes?.flatMap((v) => ["-v", v]) ?? []),
 					...(service.ports?.flatMap((p) => ["-p", p]) ?? []),

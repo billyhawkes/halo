@@ -8,6 +8,7 @@ export const main = async () => {
 		domains: ["test.recordscratch.app", "test2.recordscratch.app"],
 		package: "ghcr.io/hackthebois/recordscratch:latest",
 		ports: ["3000:3000"],
+		env: process.env,
 	});
 
 	await halo.run();
