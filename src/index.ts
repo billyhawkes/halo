@@ -5,6 +5,7 @@ export const main = async () => {
 
 	halo.resource({
 		name: "recordscratch",
+		description: "Music rating app",
 		domains: ["test.recordscratch.app", "test2.recordscratch.app"],
 		package: "ghcr.io/hackthebois/recordscratch:latest",
 		ports: ["3000:3000"],

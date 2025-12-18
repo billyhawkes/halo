@@ -19,7 +19,7 @@ export class Resources extends Effect.Service<Resources>()("app/Resource", {
 				return yield* Effect.succeed(service);
 			});
 
-		const resource = (options: ResourceConfig) =>
+		const resource = (options: Omit<ResourceConfig, "default">) =>
 			config
 				.commit({
 					...config,
@@ -27,7 +27,7 @@ export class Resources extends Effect.Service<Resources>()("app/Resource", {
 						...config.resources.filter(
 							(s) => s.name !== options.name,
 						),
-						options,
+						{ ...options, default: false },
 					],
 				})
 				.pipe(

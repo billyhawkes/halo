@@ -6,7 +6,6 @@ import {
 } from "@effect/platform";
 import { Effect, Schema } from "effect";
 import { Resources } from "./services/resources";
-import { BunContext } from "@effect/platform-bun";
 import { Config } from "./services/config";
 import { Home } from "./routes/home";
 
@@ -17,9 +16,27 @@ const Params = Schema.Struct({
 // Define the router with a single route for the root URL
 const router = HttpRouter.empty.pipe(
 	HttpRouter.get(
+		"/:path",
+		Effect.gen(function* () {
+			const path = yield* HttpRouter.schemaPathParams(
+				Schema.Struct({
+					path: Schema.String,
+				}),
+			);
+
+			return yield* HttpServerResponse.file("public/" + path.path);
+		}),
+	),
+	HttpRouter.get(
 		"/",
 		Effect.gen(function* () {
-			return yield* HttpServerResponse.html(Home("Hello"));
+			const config = yield* Config;
+
+			return yield* HttpServerResponse.html(
+				Home({
+					resources: config.resources,
+				}),
+			);
 		}),
 	),
 	HttpRouter.get(
@@ -33,11 +50,7 @@ const router = HttpRouter.empty.pipe(
 			return yield* HttpServerResponse.text(
 				`Successfully deployed ${params.name}!`,
 			);
-		}).pipe(
-			Effect.provide(Resources.Default),
-			Effect.provide(Config.Default),
-			Effect.provide(BunContext.layer),
-		),
+		}).pipe(),
 	),
 	HttpRouter.use(HttpMiddleware.logger),
 );

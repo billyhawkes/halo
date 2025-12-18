@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { listen } from "./utils/listen";
 import { app } from "./router";
 import { Resources } from "./services/resources";
@@ -7,12 +7,14 @@ import { Config } from "./services/config";
 
 export type ResourceConfig = {
 	name: string;
+	description?: string;
 	package: string;
 	ports: string[];
 	domains?: string[];
 	volumes?: string[];
 	env?: Record<string, string | undefined>;
 	envFile?: string;
+	default: boolean;
 };
 
 export const Halo = async () =>
@@ -20,10 +22,18 @@ export const Halo = async () =>
 		Effect.gen(function* () {
 			const resources = yield* Resources;
 
-			const resource = (options: ResourceConfig) =>
+			const resource = (options: Omit<ResourceConfig, "default">) =>
 				Effect.runPromise(resources.resource(options));
 
-			const run = async () => listen(app, 8156);
+			const run = () => {
+				const AppLive = app.pipe(
+					Layer.provide(Resources.Default),
+					Layer.provide(Config.Default.pipe(Layer.orDie)),
+					Layer.provide(BunContext.layer),
+				);
+
+				listen(AppLive, 8156);
+			};
 
 			return {
 				resource,

@@ -1,6 +1,6 @@
 import { FileSystem, Path } from "@effect/platform";
 import type { ResourceConfig } from "../halo";
-import { Console, Effect } from "effect";
+import { Effect } from "effect";
 
 export class Config extends Effect.Service<Config>()("app/Config", {
 	effect: Effect.gen(function* () {
@@ -36,6 +36,7 @@ export class Config extends Effect.Service<Config>()("app/Config", {
 						package: "caddy",
 						ports: ["80:80", "443:443"],
 						volumes: [`${directory}:/etc/caddy`],
+						default: true,
 					},
 				],
 			};
