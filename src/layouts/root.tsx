@@ -18,6 +18,7 @@ export const RootLayout = ({ children }: { children: JSX.Element }) => (
 					src="https://cdn.jsdelivr.net/npm/basecoat-css@0.3.7/dist/js/all.min.js"
 					defer
 				></script>
+				<link rel="icon" type="image/png" href="/logo.png" />
 				<style type="text/tailwindcss">
 					{`
 :root {

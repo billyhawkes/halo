@@ -1,6 +1,11 @@
 import { FileSystem, Path } from "@effect/platform";
-import type { ResourceConfig } from "../halo";
+import type { ResourceConfig, RootConfig } from "../halo";
 import { Effect } from "effect";
+
+type SavedConfig = {
+	root: RootConfig;
+	resources: ResourceConfig[];
+};
 
 export class Config extends Effect.Service<Config>()("app/Config", {
 	effect: Effect.gen(function* () {
@@ -19,9 +24,7 @@ export class Config extends Effect.Service<Config>()("app/Config", {
 
 		// Read or create the config file
 		const configPath = path.join(directory, "config.json");
-		let config: {
-			resources: ResourceConfig[];
-		};
+		let config: SavedConfig;
 		const configExists = yield* fs.exists(configPath);
 		if (configExists) {
 			const contents = yield* fs
@@ -30,6 +33,7 @@ export class Config extends Effect.Service<Config>()("app/Config", {
 			config = JSON.parse(contents);
 		} else {
 			config = {
+				root: {},
 				resources: [
 					{
 						name: "halo-caddy",
@@ -46,7 +50,10 @@ export class Config extends Effect.Service<Config>()("app/Config", {
 				.pipe(Effect.tap(() => Effect.log("Created config file")));
 		}
 
-		const commit = (newConfig: { resources: ResourceConfig[] }) =>
+		const commit = (newConfig: {
+			root: RootConfig;
+			resources: ResourceConfig[];
+		}) =>
 			Effect.gen(function* () {
 				// Caddy
 				const content = newConfig.resources
@@ -73,7 +80,7 @@ export class Config extends Effect.Service<Config>()("app/Config", {
 			});
 
 		return {
-			...config,
+			config,
 			commit,
 		};
 	}),

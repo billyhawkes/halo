@@ -1,94 +1,106 @@
-import { $ } from "bun";
+import { HttpApiError } from "@effect/platform";
 import type { ResourceConfig } from "../halo";
-import { Data, Effect, pipe } from "effect";
+import { Effect, Schema } from "effect";
+import { Config } from "./config";
 
-export class ShellError extends Data.TaggedError("ShellError")<{
-	message: string;
-	stdout: string;
-	stderr: string;
-	exitCode: number;
-}> {}
+const InspectSchema = Schema.Struct({
+	State: Schema.Struct({
+		Status: Schema.String,
+	}),
+});
+
+const dockerClient = (url: string, options?: RequestInit) =>
+	Effect.tryPromise(() =>
+		fetch(`http://localhost${url}`, {
+			...options,
+			unix: "/var/run/docker.sock",
+		}),
+	).pipe(
+		Effect.andThen((res) => {
+			if (res.status === 400) {
+				return new HttpApiError.BadRequest();
+			}
+			if (res.status === 404) {
+				return new HttpApiError.NotFound();
+			}
+			if (res.status === 409) {
+				return new HttpApiError.Conflict();
+			}
+			if (!res.ok) {
+				return new HttpApiError.InternalServerError();
+			}
+			return Effect.succeed(res);
+		}),
+		Effect.tap((res) =>
+			Effect.log(`Fetched ${res.url} with status ${res.status}`),
+		),
+	);
 
 export class Docker extends Effect.Service<Docker>()("app/Docker", {
 	effect: Effect.gen(function* () {
-		const command = (args: string[]) =>
-			Effect.tryPromise(() => $`docker ${args}`.nothrow().quiet()).pipe(
-				Effect.tap(() =>
-					Effect.logDebug(`COMMAND: docker ${args.join(" ")}`),
-				),
-				Effect.flatMap(({ stdout, stderr, exitCode }) => {
-					if (exitCode !== 0) {
-						return Effect.fail(
-							new ShellError({
-								message: `Failed to run: docker ${args.join(" ")}`,
-								stdout: stdout.toString(),
-								stderr: stderr.toString(),
-								exitCode,
-							}),
-						);
-					}
-
-					return Effect.succeed(stdout.toString());
-				}),
-			);
+		const { config } = yield* Config;
 
 		const status = (name: string) =>
-			pipe(
-				command(["inspect", "-f", "'{{.State.Running}}'", name]),
-				Effect.map((result) =>
-					result.trim() === "true" ? "running" : "stopped",
+			dockerClient(`/containers/${name}/json`).pipe(
+				Effect.flatMap((res) => Effect.tryPromise(() => res.json())),
+				Effect.flatMap((json) =>
+					Schema.decodeUnknown(InspectSchema)(json),
 				),
-				Effect.catchTag("ShellError", (e) =>
-					Effect.gen(function* () {
-						if (e.stderr.includes("No such object")) {
-							return yield* Effect.succeed("removed" as const);
-						}
-						return yield* Effect.fail(e);
-					}),
-				),
-				Effect.tap((status) =>
-					Effect.log(`Retrieved status for ${name}: ${status}`),
-				),
+				Effect.map(({ State }) => State.Status),
+				Effect.catchTag("NotFound", () => Effect.succeed("not-found")),
+				Effect.tap(() => Effect.log(`Retrieved status for ${name}`)),
 			);
 
 		const stop = (name: string) =>
-			pipe(
-				command(["stop", name]),
-				Effect.tap(() => Effect.log(`Stopped ${name}`)),
-			);
+			dockerClient(`/containers/${name}/stop`, {
+				method: "POST",
+			}).pipe(Effect.tap(() => Effect.log(`Stopped ${name}`)));
 
 		const pull = (image: string) =>
-			pipe(
-				command(["pull", image]),
-				Effect.tap(() => Effect.log(`Pulled ${image}`)),
-			);
+			dockerClient(
+				`/images/create?fromImage=${encodeURIComponent(image)}`,
+				{
+					method: "POST",
+					headers: {
+						"X-Registry-Auth": Buffer.from(
+							JSON.stringify(config.root.auth),
+						).toString("base64"),
+					},
+				},
+			).pipe(Effect.tap(() => Effect.log(`Pulled ${image}`)));
 
 		const remove = (name: string) =>
-			pipe(
-				command(["rm", "-f", name]),
-				Effect.tap(() => Effect.log(`Removed ${name}`)),
-			);
+			dockerClient(`/containers/${name}`, {
+				method: "DELETE",
+			}).pipe(Effect.tap(() => Effect.log(`Removed ${name}`)));
 
 		const run = (service: ResourceConfig) =>
-			pipe(
-				command([
-					"run",
-					"-d",
-					"--rm",
-					"--network=halo",
-					...(service.env
-						? Object.entries(service.env).flatMap(([k, v]) => [
-								"-e",
-								`${k}=${v}`,
-							])
-						: []),
-					...["--name", service.name],
-					...(service.volumes?.flatMap((v) => ["-v", v]) ?? []),
-					...(service.ports?.flatMap((p) => ["-p", p]) ?? []),
-					service.package,
-				]),
-				Effect.tap(() => Effect.log(`Started ${service.name}`)),
-			);
+			Effect.gen(function* () {
+				yield* dockerClient(`/containers/create?name=${service.name}`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						Image: service.package,
+						Env: Object.entries(service.env ?? {}).map(
+							([k, v]) => `${k}=${v}`,
+						),
+						ExposedPorts: Object.fromEntries(
+							service.ports?.map((p) => [p, {}]) ?? [],
+						),
+						HostConfig: {
+							NetworkMode: "halo",
+							Binds: service.volumes,
+						},
+					}),
+				}).pipe(
+					Effect.tap(() => Effect.log(`Started ${service.name}`)),
+				);
+				yield* dockerClient(`/containers/${service.name}/start`, {
+					method: "POST",
+				});
+			});
 
 		return {
 			status,

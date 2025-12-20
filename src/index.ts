@@ -1,7 +1,13 @@
 import { Halo } from "./halo";
 
 export const main = async () => {
-	const halo = await Halo();
+	const halo = await Halo({
+		auth: {
+			username: "billyhawkes",
+			password: process.env.GH_PAT,
+			serveraddress: "ghcr.io",
+		},
+	});
 
 	halo.resource({
 		name: "recordscratch",
@@ -12,7 +18,7 @@ export const main = async () => {
 		env: process.env,
 	});
 
-	await halo.run();
+	halo.run();
 };
 
 await main();

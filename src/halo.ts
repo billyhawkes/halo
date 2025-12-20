@@ -5,6 +5,14 @@ import { Resources } from "./services/resources";
 import { BunContext } from "@effect/platform-bun";
 import { Config } from "./services/config";
 
+export type RootConfig = {
+	auth?: {
+		username: string;
+		password: string;
+		serveraddress: string;
+	};
+};
+
 export type ResourceConfig = {
 	name: string;
 	description?: string;
@@ -17,10 +25,16 @@ export type ResourceConfig = {
 	default: boolean;
 };
 
-export const Halo = async () =>
+export const Halo = async (rootConfig?: RootConfig) =>
 	await Effect.runPromise(
 		Effect.gen(function* () {
 			const resources = yield* Resources;
+			const { config, commit } = yield* Config;
+
+			yield* commit({
+				...config,
+				root: rootConfig,
+			});
 
 			const resource = (options: Omit<ResourceConfig, "default">) =>
 				Effect.runPromise(resources.resource(options));

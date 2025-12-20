@@ -30,7 +30,7 @@ const router = HttpRouter.empty.pipe(
 	HttpRouter.get(
 		"/",
 		Effect.gen(function* () {
-			const config = yield* Config;
+			const { config } = yield* Config;
 
 			return yield* HttpServerResponse.html(
 				Home({

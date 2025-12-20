@@ -6,7 +6,7 @@ import { Config } from "./config";
 export class Resources extends Effect.Service<Resources>()("app/Resource", {
 	effect: Effect.gen(function* () {
 		const docker = yield* Docker;
-		const config = yield* Config;
+		const { config, commit } = yield* Config;
 
 		const get = (name: string) =>
 			Effect.gen(function* () {
@@ -20,21 +20,17 @@ export class Resources extends Effect.Service<Resources>()("app/Resource", {
 			});
 
 		const resource = (options: Omit<ResourceConfig, "default">) =>
-			config
-				.commit({
-					...config,
-					resources: [
-						...config.resources.filter(
-							(s) => s.name !== options.name,
-						),
-						{ ...options, default: false },
-					],
-				})
-				.pipe(
-					Effect.tap(() =>
-						Effect.log(`Registered service ${options.name}`),
-					),
-				);
+			commit({
+				...config,
+				resources: [
+					...config.resources.filter((s) => s.name !== options.name),
+					{ ...options, default: false },
+				],
+			}).pipe(
+				Effect.tap(() =>
+					Effect.log(`Registered service ${options.name}`),
+				),
+			);
 
 		const deploy = (resource?: ResourceConfig) =>
 			Effect.forEach(
@@ -44,11 +40,12 @@ export class Resources extends Effect.Service<Resources>()("app/Resource", {
 						yield* docker.pull(service.package);
 
 						const status = yield* docker.status(service.name);
+						yield* Effect.log(`State: ${status}`);
 						if (status === "running") {
 							yield* docker.stop(service.name);
 						}
 
-						if (status !== "removed") {
+						if (status !== "not-found") {
 							yield* docker.remove(service.name);
 						}
 
