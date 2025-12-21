@@ -8,6 +8,8 @@ import { Effect, Schema } from "effect";
 import { Resources } from "./services/resources";
 import { Config } from "./services/config";
 import { Home } from "./routes/home";
+import { ResourcePage } from "./routes/resources.$name";
+import { ResourceLogsPage } from "./routes/resources.$name.logs";
 
 const Params = Schema.Struct({
 	name: Schema.String,
@@ -51,6 +53,34 @@ const router = HttpRouter.empty.pipe(
 				`Successfully deployed ${params.name}!`,
 			);
 		}).pipe(),
+	),
+	HttpRouter.get(
+		"/resources/:name",
+		Effect.gen(function* () {
+			const resources = yield* Resources;
+			const params = yield* HttpRouter.schemaPathParams(Params);
+			const resource = yield* resources.get(params.name);
+
+			return yield* HttpServerResponse.html(
+				ResourcePage({
+					resource,
+				}),
+			);
+		}),
+	),
+	HttpRouter.get(
+		"/resources/:name/logs",
+		Effect.gen(function* () {
+			const resources = yield* Resources;
+			const params = yield* HttpRouter.schemaPathParams(Params);
+			const resource = yield* resources.get(params.name);
+
+			return yield* HttpServerResponse.html(
+				ResourceLogsPage({
+					resource,
+				}),
+			);
+		}),
 	),
 	HttpRouter.use(HttpMiddleware.logger),
 );

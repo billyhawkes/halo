@@ -1,9 +1,27 @@
-export const RootLayout = ({ children }: { children: JSX.Element }) => (
+import { rootStyles } from "./root-styles";
+
+type NavItem = {
+	name: string;
+	href: string;
+	current?: boolean;
+};
+
+export const RootLayout = ({
+	children,
+	title,
+	breadcrumbs = [],
+	tabs = [],
+}: {
+	children: JSX.Element;
+	title?: string;
+	breadcrumbs?: NavItem[];
+	tabs?: NavItem[];
+}) => (
 	<>
 		{"<!doctype html>"}
 		<html>
 			<head>
-				<title>Halo</title>
+				<title>Halo {title ? `- ${title}` : ""}</title>
 				<meta charset="UTF-8" />
 				<meta
 					name="viewport"
@@ -18,167 +36,83 @@ export const RootLayout = ({ children }: { children: JSX.Element }) => (
 					src="https://cdn.jsdelivr.net/npm/basecoat-css@0.3.7/dist/js/all.min.js"
 					defer
 				></script>
+				<link rel="preconnect" href="https://fonts.googleapis.com" />
+				<link
+					rel="preconnect"
+					href="https://fonts.gstatic.com"
+					crossorigin=""
+				/>
+				<link
+					href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap"
+					rel="stylesheet"
+				/>
+
 				<link rel="icon" type="image/png" href="/logo.png" />
-				<style type="text/tailwindcss">
+				<script
+					type="module"
+					src="https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.0-RC.7/bundles/datastar.js"
+				></script>
+				<style type="text/tailwindcss">{rootStyles}</style>
+				<style type="text/css">
 					{`
-:root {
-  --background: oklch(1.0000 0 0);
-  --foreground: oklch(0.2686 0 0);
-  --card: oklch(1.0000 0 0);
-  --card-foreground: oklch(0.2686 0 0);
-  --popover: oklch(1.0000 0 0);
-  --popover-foreground: oklch(0.2686 0 0);
-  --primary: oklch(0.7686 0.1647 70.0804);
-  --primary-foreground: oklch(0 0 0);
-  --secondary: oklch(0.9670 0.0029 264.5419);
-  --secondary-foreground: oklch(0.4461 0.0263 256.8018);
-  --muted: oklch(0.9846 0.0017 247.8389);
-  --muted-foreground: oklch(0.5510 0.0234 264.3637);
-  --accent: oklch(0.9869 0.0214 95.2774);
-  --accent-foreground: oklch(0.4732 0.1247 46.2007);
-  --destructive: oklch(0.6368 0.2078 25.3313);
-  --destructive-foreground: oklch(1.0000 0 0);
-  --border: oklch(0.9276 0.0058 264.5313);
-  --input: oklch(0.9276 0.0058 264.5313);
-  --ring: oklch(0.7686 0.1647 70.0804);
-  --chart-1: oklch(0.7686 0.1647 70.0804);
-  --chart-2: oklch(0.6658 0.1574 58.3183);
-  --chart-3: oklch(0.5553 0.1455 48.9975);
-  --chart-4: oklch(0.4732 0.1247 46.2007);
-  --chart-5: oklch(0.4137 0.1054 45.9038);
-  --sidebar: oklch(0.9846 0.0017 247.8389);
-  --sidebar-foreground: oklch(0.2686 0 0);
-  --sidebar-primary: oklch(0.7686 0.1647 70.0804);
-  --sidebar-primary-foreground: oklch(1.0000 0 0);
-  --sidebar-accent: oklch(0.9869 0.0214 95.2774);
-  --sidebar-accent-foreground: oklch(0.4732 0.1247 46.2007);
-  --sidebar-border: oklch(0.9276 0.0058 264.5313);
-  --sidebar-ring: oklch(0.7686 0.1647 70.0804);
-  --font-sans: Montserrat, sans-serif;
-  --font-serif: Montserrat, sans-serif;
-  --font-mono: Montserrat, sans-serif;
-  --radius: 0.375rem;
-  --shadow-2xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
-  --shadow-xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
-  --shadow-sm: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 1px 2px -2px hsl(0 0% 0% / 0.10);
-  --shadow: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 1px 2px -2px hsl(0 0% 0% / 0.10);
-  --shadow-md: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 2px 4px -2px hsl(0 0% 0% / 0.10);
-  --shadow-lg: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 4px 6px -2px hsl(0 0% 0% / 0.10);
-  --shadow-xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 8px 10px -2px hsl(0 0% 0% / 0.10);
-  --shadow-2xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.25);
-  --tracking-normal: 0em;
-  --spacing: 0.25rem;
-}
-
-.dark {
-  --background: oklch(0.2046 0 0);
-  --foreground: oklch(0.9219 0 0);
-  --card: oklch(0.2686 0 0);
-  --card-foreground: oklch(0.9219 0 0);
-  --popover: oklch(0.2686 0 0);
-  --popover-foreground: oklch(0.9219 0 0);
-  --primary: oklch(0.7686 0.1647 70.0804);
-  --primary-foreground: oklch(0 0 0);
-  --secondary: oklch(0.2686 0 0);
-  --secondary-foreground: oklch(0.9219 0 0);
-  --muted: oklch(0.2686 0 0);
-  --muted-foreground: oklch(0.7155 0 0);
-  --accent: oklch(0.4732 0.1247 46.2007);
-  --accent-foreground: oklch(0.9243 0.1151 95.7459);
-  --destructive: oklch(0.6368 0.2078 25.3313);
-  --destructive-foreground: oklch(1.0000 0 0);
-  --border: oklch(0.3715 0 0);
-  --input: oklch(0.3715 0 0);
-  --ring: oklch(0.7686 0.1647 70.0804);
-  --chart-1: oklch(0.8369 0.1644 84.4286);
-  --chart-2: oklch(0.6658 0.1574 58.3183);
-  --chart-3: oklch(0.4732 0.1247 46.2007);
-  --chart-4: oklch(0.5553 0.1455 48.9975);
-  --chart-5: oklch(0.4732 0.1247 46.2007);
-  --sidebar: oklch(0.1684 0 0);
-  --sidebar-foreground: oklch(0.9219 0 0);
-  --sidebar-primary: oklch(0.7686 0.1647 70.0804);
-  --sidebar-primary-foreground: oklch(1.0000 0 0);
-  --sidebar-accent: oklch(0.4732 0.1247 46.2007);
-  --sidebar-accent-foreground: oklch(0.9243 0.1151 95.7459);
-  --sidebar-border: oklch(0.3715 0 0);
-  --sidebar-ring: oklch(0.7686 0.1647 70.0804);
-  --font-sans: Montserrat, sans-serif;
-  --font-serif: Montserrat, sans-serif;
-  --font-mono: Montserrat, sans-serif;
-  --radius: 0.375rem;
-  --shadow-2xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
-  --shadow-xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
-  --shadow-sm: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 1px 2px -2px hsl(0 0% 0% / 0.10);
-  --shadow: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 1px 2px -2px hsl(0 0% 0% / 0.10);
-  --shadow-md: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 2px 4px -2px hsl(0 0% 0% / 0.10);
-  --shadow-lg: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 4px 6px -2px hsl(0 0% 0% / 0.10);
-  --shadow-xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 8px 10px -2px hsl(0 0% 0% / 0.10);
-  --shadow-2xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.25);
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
-  --font-serif: var(--font-serif);
-
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-
-  --shadow-2xs: var(--shadow-2xs);
-  --shadow-xs: var(--shadow-xs);
-  --shadow-sm: var(--shadow-sm);
-  --shadow: var(--shadow);
-  --shadow-md: var(--shadow-md);
-  --shadow-lg: var(--shadow-lg);
-  --shadow-xl: var(--shadow-xl);
-  --shadow-2xl: var(--shadow-2xl);
-}
-
-@layer base {
-	* {
-		@apply border-border;
- 	}
-}
-`}
+					html {
+						font-family: "Lato", sans-serif;
+					}`}
 				</style>
+				<script src="https://unpkg.com/lucide@latest"></script>
 			</head>
-			<body>{children}</body>
+			<body>
+				<header class="p-4 flex flex-col gap-2 border-b border-border">
+					<div class="flex items-center gap-2">
+						<a href="/" class="flex items-center gap-2">
+							<img src="/logo.png" alt="Halo" class="size-12" />
+							<p class="text-lg font-bold">Halo</p>
+						</a>
+						<ol class="text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm break-words sm:gap-2.5">
+							{breadcrumbs.map(({ name, href, current }) => (
+								<>
+									<li>
+										<i
+											data-lucide="chevron-right"
+											class="size-4"
+										></i>
+									</li>
+									<li class="inline-flex items-center gap-1.5">
+										<a
+											href={href}
+											class={
+												current
+													? "text-foreground font-normal"
+													: "hover:text-foreground transition-colors"
+											}
+											safe
+										>
+											{name}
+										</a>
+									</li>
+								</>
+							))}
+						</ol>
+					</div>
+					<nav class="flex gap-2">
+						{tabs.map((tab) => (
+							<a
+								class={
+									tab.current
+										? "btn-sm-secondary"
+										: "btn-sm-ghost"
+								}
+								href={tab.href}
+								safe
+							>
+								{tab.name}
+							</a>
+						))}
+					</nav>
+				</header>
+				{children}
+				<script>{`lucide.createIcons();`}</script>
+			</body>
 		</html>
 	</>
 );

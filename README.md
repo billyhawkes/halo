@@ -36,7 +36,7 @@ This tool is inspired by SST's library and Coolify's rich ecosystem.
 
 ### Dashboard
 - [ ] Authentication (Master pass)
-- [ ] Services (Logs, redeploy, status)
+- [ ] Resources (Logs, redeploy, status)
 
 
 ## API (CURRENT)

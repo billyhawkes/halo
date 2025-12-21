@@ -6,7 +6,7 @@ const Resource = ({ resource }: { resource: ResourceConfig }) => {
 		Boolean,
 	);
 	return (
-		<a class="card" href={`/resources/${resource.name}`}>
+		<a class="card gap-2" href={`/resources/${resource.name}`}>
 			<header>
 				<h2 safe>{resource.name}</h2>
 				{resource.description ? (
@@ -28,11 +28,13 @@ const Resource = ({ resource }: { resource: ResourceConfig }) => {
 
 export const Home = ({ resources }: { resources: ResourceConfig[] }) =>
 	(
-		<RootLayout>
+		<RootLayout tabs={[{ name: "Overview", href: "/", current: true }]}>
 			<main class="flex flex-col gap-4 p-4">
-				{resources.map((resource) => (
-					<Resource resource={resource} />
-				))}
+				{resources
+					.filter((r) => !r.default)
+					.map((resource) => (
+						<Resource resource={resource} />
+					))}
 			</main>
 		</RootLayout>
 	) as string;
