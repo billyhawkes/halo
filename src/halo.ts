@@ -4,6 +4,7 @@ import { app } from "./router";
 import { Resources } from "./services/resources";
 import { BunContext } from "@effect/platform-bun";
 import { Config } from "./services/config";
+import { Docker } from "./services/docker";
 
 export type RootConfig = {
 	auth?: {
@@ -42,6 +43,7 @@ export const Halo = async (rootConfig?: RootConfig) =>
 			const run = () => {
 				const AppLive = app.pipe(
 					Layer.provide(Resources.Default),
+					Layer.provide(Docker.Default),
 					Layer.provide(Config.Default.pipe(Layer.orDie)),
 					Layer.provide(BunContext.layer),
 				);

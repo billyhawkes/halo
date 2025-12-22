@@ -37,19 +37,21 @@ export class Resources extends Effect.Service<Resources>()("app/Resource", {
 				resource ? [resource] : config.resources,
 				(service) =>
 					Effect.gen(function* () {
-						yield* docker.pull(service.package);
+						yield* docker.image.pull(service.package);
 
-						const status = yield* docker.status(service.name);
+						const status = yield* docker.container.status(
+							service.name,
+						);
 						yield* Effect.log(`State: ${status}`);
 						if (status === "running") {
-							yield* docker.stop(service.name);
+							yield* docker.container.stop(service.name);
 						}
 
 						if (status !== "not-found") {
-							yield* docker.remove(service.name);
+							yield* docker.container.remove(service.name);
 						}
 
-						yield* docker.run(service);
+						yield* docker.container.run(service);
 					}).pipe(
 						Effect.tap(() =>
 							Effect.log(`Deployed ${service.name}`),
