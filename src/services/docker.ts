@@ -1,6 +1,5 @@
-import { HttpApiError } from "@effect/platform";
 import type { ResourceConfig } from "../halo";
-import { Effect, Schema } from "effect";
+import { Data, Effect, Match, Schema } from "effect";
 import { Config } from "./config";
 
 const InspectSchema = Schema.Struct({
@@ -9,6 +8,32 @@ const InspectSchema = Schema.Struct({
 	}),
 });
 
+type DockerErrorData = {
+	url: string;
+	status: number;
+	message: string;
+};
+
+const DockerErrorSchema = Schema.Struct({
+	message: Schema.String,
+});
+
+class DockerBadRequest extends Data.TaggedError(
+	"DockerBadRequest",
+)<DockerErrorData> {}
+class DockerForbidden extends Data.TaggedError(
+	"DockerForbidden",
+)<DockerErrorData> {}
+class DockerNotFound extends Data.TaggedError(
+	"DockerNotFound",
+)<DockerErrorData> {}
+class DockerConflict extends Data.TaggedError(
+	"DockerConflict",
+)<DockerErrorData> {}
+class DockerInternalServerError extends Data.TaggedError(
+	"DockerInternalServerError",
+)<DockerErrorData> {}
+
 const dockerClient = (url: string, options?: RequestInit) =>
 	Effect.tryPromise(() =>
 		fetch(`http://localhost${url}`, {
@@ -16,21 +41,46 @@ const dockerClient = (url: string, options?: RequestInit) =>
 			unix: "/var/run/docker.sock",
 		}),
 	).pipe(
-		Effect.andThen((res) => {
-			if (res.status === 400) {
-				return new HttpApiError.BadRequest();
-			}
-			if (res.status === 404) {
-				return new HttpApiError.NotFound();
-			}
-			if (res.status === 409) {
-				return new HttpApiError.Conflict();
-			}
-			if (!res.ok) {
-				return new HttpApiError.InternalServerError();
-			}
-			return Effect.succeed(res);
-		}),
+		Effect.flatMap((res) =>
+			Effect.gen(function* () {
+				if (!res.ok) {
+					const body = yield* Effect.tryPromise(() =>
+						res.json(),
+					).pipe(
+						Effect.flatMap((json) =>
+							Schema.decodeUnknown(DockerErrorSchema)(json),
+						),
+					);
+
+					const errorData = {
+						url,
+						message: body.message,
+						status: res.status,
+					} satisfies DockerErrorData;
+
+					return yield* Match.value(res.status).pipe(
+						Match.when(400, () =>
+							Effect.fail(new DockerBadRequest(errorData)),
+						),
+						Match.when(403, () =>
+							Effect.fail(new DockerForbidden(errorData)),
+						),
+						Match.when(404, () =>
+							Effect.fail(new DockerNotFound(errorData)),
+						),
+						Match.when(409, () =>
+							Effect.fail(new DockerConflict(errorData)),
+						),
+						Match.orElse(() =>
+							Effect.fail(
+								new DockerInternalServerError(errorData),
+							),
+						),
+					);
+				}
+				return yield* Effect.succeed(res);
+			}),
+		),
 		Effect.tap((res) =>
 			Effect.log(`Fetched ${res.url} with status ${res.status}`),
 		),
@@ -69,7 +119,7 @@ export class Docker extends Effect.Service<Docker>()("app/Docker", {
 						Schema.decodeUnknown(InspectSchema)(json),
 					),
 					Effect.map(({ State }) => State.Status),
-					Effect.catchTag("NotFound", () =>
+					Effect.catchTag("DockerNotFound", () =>
 						Effect.succeed("not-found"),
 					),
 					Effect.tap(() =>
@@ -114,11 +164,25 @@ export class Docker extends Effect.Service<Docker>()("app/Docker", {
 				name: string,
 				options?: {
 					timestamps?: boolean;
+					stderr?: boolean;
+					stdout?: boolean;
 				},
-			) =>
-				dockerClient(
-					`/containers/${name}/logs?stdout=true&stderr=true&timestamps=${options?.timestamps ? options.timestamps : false}`,
-				).pipe(Effect.map((res) => res.body)),
+			) => {
+				const {
+					timestamps = false,
+					stderr = true,
+					stdout = true,
+				} = options ?? {};
+
+				const searchParams = new URLSearchParams({
+					timestamps: String(timestamps),
+					stdout: String(stdout),
+					stderr: String(stderr),
+				});
+				return dockerClient(
+					`/containers/${name}/logs` + `?${searchParams.toString()}`,
+				).pipe(Effect.map((res) => res.body));
+			},
 		};
 
 		return {

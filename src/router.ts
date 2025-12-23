@@ -5,7 +5,7 @@ import {
 	HttpServerRequest,
 	HttpServerResponse,
 } from "@effect/platform";
-import { Effect, Schema, Stream } from "effect";
+import { Console, Effect, pipe, Schema, Stream } from "effect";
 import { Resources } from "./services/resources";
 import { Config } from "./services/config";
 import { Home } from "./routes/home";
@@ -18,7 +18,19 @@ const Params = Schema.Struct({
 });
 
 const LogSearchParams = Schema.Struct({
-	datastar: Schema.String,
+	datastar: Schema.parseJson(
+		Schema.Struct({
+			timestamps: Schema.optionalWith(Schema.Boolean, {
+				exact: true,
+			}),
+			stderr: Schema.optionalWith(Schema.Boolean, {
+				exact: true,
+			}),
+			stdout: Schema.optionalWith(Schema.Boolean, {
+				exact: true,
+			}),
+		}),
+	),
 });
 
 // Define the router with a single route for the root URL
@@ -98,13 +110,10 @@ const router = HttpRouter.empty.pipe(
 				yield* HttpServerRequest.schemaSearchParams(LogSearchParams);
 			const resource = yield* resources.get(params.name);
 
-			const query = JSON.parse(logParams.datastar);
-
-			yield* Effect.log(query);
-
-			const stream = yield* docker.container.logs(resource.name, {
-				timestamps: query.timestamps,
-			});
+			const stream = yield* docker.container.logs(
+				resource.name,
+				logParams.datastar,
+			);
 
 			const encoder = new TextEncoder();
 			const decoder = new TextDecoder();
@@ -122,7 +131,6 @@ const router = HttpRouter.empty.pipe(
 								`data: elements <pre>${line.slice(1).trim()}</pre>\n`,
 						)
 						.join("");
-					console.log(text);
 					return encoder.encode(
 						`event: datastar-patch-elements\ndata: selector #logs\ndata: mode inner\n${text}\n`,
 					);
@@ -138,4 +146,10 @@ const router = HttpRouter.empty.pipe(
 );
 
 // Set up the application server with logging
-export const app = router.pipe(HttpServer.serve(), HttpServer.withLogAddress);
+export const app = router.pipe(
+	Effect.catchAllCause((cause) =>
+		HttpServerResponse.text(cause.toString(), { status: 500 }),
+	),
+	HttpServer.serve(),
+	HttpServer.withLogAddress,
+);
